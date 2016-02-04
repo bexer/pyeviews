@@ -2,24 +2,13 @@
 from comtypes.client import CreateObject
 import numpy as np       
 import pandas as pa
-#import Lib/string.y
+import fnmatch
 
-#def ConvertToEViews(df) :
-#    if type(df) == pa.core.frame.DataFrame:
-#        coln = list(df.columns.values)
-#        datam = df.as_matrix()
-#        freq = df.index.freqstr
-#        dts = df.index.values
-#        vec2 = ["python.DataFrame", coln, datam, freq, dts]
-#        return vec2
-#    else:
-#        return df    
-
-def __BuildWFFromPython(objlen):
+def _BuildWFFromPython(objlen):
     result = "create u " + str(objlen)
     return result
 
-def __BuildWFFromPandas(obj) :
+def _BuildWFFromPandas(obj) :
     elem_cnt = len(obj)
     freq_str_all = obj.freqstr
     pos = freq_str_all.find("-")
@@ -100,47 +89,47 @@ def __BuildWFFromPandas(obj) :
         raise ValueError('Unrecognized frequency: ' + freq_str)
     return result   
     
-def __CheckReservedNames(names):
+def _CheckReservedNames(names):
     if 'c' in names:
         raise ValueError('c is not an allowed name for a series.')
     if 'resid' in names:
         raise ValueError('resid is not an allowed name for a series.')
 
-def __CreateEViewsWF(app, obj) :
+def _CreateEViewsWF(app, obj) :
     # which python data structure is obj?
     if type(obj) == pa.core.frame.DataFrame:
         #create a new EViews workfile with the right frequency
-        create = __BuildWFFromPandas(obj.index)
+        create = _BuildWFFromPandas(obj.index)
         app.Run(create)
-        __CheckReservedNames(obj.columns)
+        _CheckReservedNames(obj.columns)
         # loop through all columns and push each into EViews as series objects
         for col in obj.columns:
             col_data = obj.as_matrix(columns=[col])
             app.PutSeries(col, col_data)
     elif type(obj) == pa.core.series.Series:
         #create a new EViews workfile with the right frequency
-        create = __BuildWFFromPandas(obj.index)
+        create = _BuildWFFromPandas(obj.index)
         app.Run(create)
         # push the data into EViews as a series object
         name = "series"
         if (obj.name):
             name = obj.name
-            __CheckReservedNames([name])
+            _CheckReservedNames([name])
         data = obj.as_matrix()
         app.PutSeries(name, data)
     elif type(obj) == pa.tseries.index.DatetimeIndex:
         #create a new EViews workfile with the right frequency
-        create = __BuildWFFromPandas(obj)
+        create = _BuildWFFromPandas(obj)
         app.Run(create)
     elif type(obj) == pa.core.panel.Panel:
         #create a new EViews workfile with the right frequency
-        create = __BuildWFFromPandas(obj.major_axis)
+        create = _BuildWFFromPandas(obj.major_axis)
         create = create + str(len(obj.items))
         app.Run(create)
         # concatenate items into single dataframe
         # loop through and push each column into EViews as a series object
         result = pa.concat([obj[item] for item in obj.items])
-        __CheckReservedNames(result.columns)
+        _CheckReservedNames(result.columns)
         for col in result.columns:
             #col_name = obj.columns[col_index]
             #col_data = list(obj.values[col_index])
@@ -148,7 +137,7 @@ def __CreateEViewsWF(app, obj) :
             app.PutSeries(col, col_data)  
     elif type(obj) == list:
         # create a new undated workfile with the right length
-        create = __BuildWFFromPython(obj)
+        create = _BuildWFFromPython(obj)
         app.Run(create)
         # push the data into EViews as a series object
         data = np.asarray(obj)
@@ -156,9 +145,9 @@ def __CreateEViewsWF(app, obj) :
     elif type(obj) == dict:
         # create a new undated workfile with the right length
         length = max(len(item) for item in obj.values())
-        create = __BuildWFFromPython(length)
+        create = _BuildWFFromPython(length)
         app.Run(create)
-        __CheckReservedNames(obj.keys())
+        _CheckReservedNames(obj.keys())
         # loop through the dict and push the data into EViews as series objects
         for key in obj.keys():
             data = np.asarray(obj[key])
@@ -168,7 +157,7 @@ def __CreateEViewsWF(app, obj) :
         # is it a structured array?
         if (obj.dtype.names):
             raise ValueError('Structured arrays are not supported.')
-        create = __BuildWFFromPython(obj.shape[1])
+        create = _BuildWFFromPython(obj.shape[1])
         app.Run(create)
        # loop through the array, push the data into EViews as series objects
         for col_num in range(len(obj)):
@@ -178,6 +167,95 @@ def __CreateEViewsWF(app, obj) :
     else:
         raise ValueError('Unsupported type: ' + str(type(obj)))
 
+def _CreatePandasFromWF(app, fn, pgnm = "", nmfilter="*"):
+    dt_map = {'D5':'B', '5':'B', 'D7':'C', 'D7':'D', '7':'D', 'D':'C',
+              'W':'W', 'M':'MS', 'Q':'QS', 'A':'AS', 'Y':'AS', 
+              'H':'H', 'Min':'T', 'Min':'min', 'Sec':'S'}
+    #load the workfile 
+    app.Run("wfopen " + fn)
+    
+    if (len(pgnm) > 0):
+        #change workfile page to specified page name
+        if (app.Get('=@pageexist("' + str(pgnm) + '")') == 1):
+            app.Run("pageselect " + str(pgnm))
+        else:
+            raise ValueError('Invalid pagename: ' + str(pgnm))
+
+    #get workfile frequency
+    pgfreq = app.Get("=@pagefreq")
+    #print pgfreq;
+    
+    #reset sample range to all
+    app.Run("smpl @all")
+    #pgsmpl = app.Get("=@pagesmpl");
+    #print pgsmpl;
+    
+    # is the workfile a panel?
+    ispanel = app.Get("=@ispanel")
+    
+    #get series names as a 1-dim array
+    snames = app.Lookup(nmfilter, "series", 1);
+    if (len(snames) == 0):
+        raise ValueError('No series objects found.')
+    
+    #build Datetimeindex object
+    if pgfreq in ['2Y', '3Y', '4Y', '5Y', '6Y', '7Y', '8Y', '9Y', '10Y', '20Y',
+                  'S', 'BM', 'F', 'T', '2H', '4H', '6H', '8H', '12H',
+                  '2Min', '5Min', '10Min', '15Min', '20Min', '30Min',
+                  '5Sec', '15Sec', '30Sec']:
+        raise ValueError(pgfreq + ' is not supported in pandas.')
+    elif (pgfreq in ['D5', '5', 'D7', 'D7', '7', 'D',
+                    'W', 'M', 'Q', 'A', 'Y', 'H', 'Min', 'Min', 'Sec'] or 
+                    fnmatch.fnmatch(pgfreq, 'D(*)')):
+        #get index series
+        dts = app.GetSeries("@date")
+        #print dts;
+        if fnmatch.fnmatch(pgfreq, 'D(*)'):
+            idx = pa.DatetimeIndex(dts, freq='C')
+        else:
+            idx = pa.DatetimeIndex(dts, freq=dt_map[pgfreq])
+        #print idx;
+    elif pgfreq == 'U':
+        pass
+    else:
+        raise ValueError('Unsupported workfile frequency: ' + pgfreq)
+    
+    #get series names as a space delimited string
+    snames_str = app.Lookup(nmfilter, "series");
+    
+    #retrieve all series data as a single call
+    grp = app.GetGroup(snames_str, "@all");
+    if (pgfreq in ['D5', '5', 'D7', 'D7', '7', 'D',
+                   'W', 'M', 'Q', 'A', 'Y', 'H', 'Min', 'Min', 'Sec'] or 
+                   fnmatch.fnmatch(pgfreq, 'D(*)')):
+        # for dated workfiles create the dataframe
+        # build dataframe with empty columns 
+        # (have to re-encode snames to ascii from unicode)           
+        df = pa.DataFrame(index=idx, columns=[x.encode('ascii') for x in snames])
+        #for each series name, extract the data from our grp array
+        for sindex in range(len(snames)):
+            df[snames[sindex]] = [col[sindex] for col in grp]
+        data = df
+    elif pgfreq == 'U':
+        # for undated workfiles we don't pass in an index
+        df = pa.DataFrame(columns=[x.encode('ascii') for x in snames])      
+        # for each series name, extract the data from our grp array
+        for sindex in range(len(snames)):
+            df[snames[sindex]] = [col[sindex] for col in grp]
+        data = df
+    if ispanel == True:
+        crossids = df['CROSSID'].unique()
+        datadict = {elem: pa.DataFrame for elem in crossids}
+        for key in datadict.keys():
+            datadict[key] = df[:][df['CROSSID'] == key]
+            datadict[key].drop(['CROSSID','DATEID'], axis=1, inplace=True)
+        data = pa.Panel(datadict)   
+
+    #close the workfile
+    app.Run("wfclose")
+    
+    return data
+    
 def NewEViewsWF(obj):
     #get manager object
     mgr = CreateObject("EViews.Manager")
@@ -185,7 +263,7 @@ def NewEViewsWF(obj):
     app = mgr.GetApplication(1)
     #show EViews window
     app.Show() #optional
-    __CreateEViewsWF(app, obj)
+    _CreateEViewsWF(app, obj)
     
 #def EViewsCommand(commandstr):
 #    app.Run(commandstr)
@@ -226,14 +304,28 @@ s = pa.Series(np.random.randn(20), index=dts, name = 'egypt')
 #               dtype=[('hi','i4'),('bye','i4'),('why','i4')])
 #print d
 
+#get manager object
+mgr = CreateObject("EViews.Manager")
+#get application object
+app = mgr.GetApplication(1)
+#show EViews window
+app.Show() #optional
 #CreateEViewsWF(app, dts)
-#CreateEViewsWF(app, s)
+#_CreateEViewsWF(app, s)
 #CreateEViewsWF(app, df)
 #CreateEViewsWF(app, pl)
 #CreateEViewsWF(app, l)
 #CreateEViewsWF(app, d)
 #CreateEViewsWF(app, a1)
 #CreateEViewsWF(app, a2)
+#df = CreatePandasFromEViewsWF(app, "quarterly.wf1");
+#df = CreatePandasFromEViewsWF(app, "annual.wf1");
+#df = CreatePandasFromEViewsWF(app, "monthly.wf1");
+#df = CreatePandasFromEViewsWF(app, "q:\\python+eviews\\egypt.wf1", "custom", "*");
+#df = CreatePandasFromEViewsWF(app, "c:\\users\\gxb43910\\desktop\\both.wf1", "quarterly", "*");
+#data = CreatePandasFromEViewsWF(app, "c:\\users\\gxb43910\\desktop\\both.wf1", "undated", "*");
+data = _CreatePandasFromWF(app, "q:\\python+eviews\\panel.wf1", "panel", "*");
+print data
 """
 app.Run("wfopen c:\\files\\src.wf1")
 col1 = app.GetSeries("col1")
