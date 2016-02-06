@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from comtypes.client import CreateObject
 import numpy as np       
 import pandas as pa

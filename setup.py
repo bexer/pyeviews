@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from setuptools import setup
 
 def readme():
@@ -18,7 +17,7 @@ setup(name='pyeviews',
                    'Topic :: Scientific/Engineering :: Information Analysis'],
       keywords='eviews econometrics',
       url='https://github.com/bexer/pyeviews',
-      author='Rebecca Erwin',
+      author='Rebecca Erwin & Steve Yoo',
       author_email='bexer@yahoo.com',
       license=licensefile(),
       packages=['pyeviews'],
