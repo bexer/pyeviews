@@ -17,7 +17,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 #        return f.read()
         
 setup(name='pyeviews',
-      version='0.1.2',
+      version='0.1.3',
       description='Data import/export and EViews function calls from Python',
       long_description=long_description,
       classifiers=['Development Status :: 4 - Beta',
@@ -27,7 +27,7 @@ setup(name='pyeviews',
                    'Operating System :: Microsoft :: Windows'],
       keywords='eviews econometrics',
       url='https://github.com/bexer/pyeviews',
-      author='Rebecca Erwin & Steve Yoo',
+      author='IHS EViews',
       author_email='bexer@yahoo.com',
       license='GPLv3',
       packages=['pyeviews'],
