@@ -61,18 +61,18 @@ or by downloading the package, navigating to your installation directory, and us
     >>> benchmarked = evp.GetWFAsPython(app=eviewsapp, pagename= 'quarterly', namefilter= 'benchmarked ')
     >>> print benchmarked
                 BENCHMARKED
-    1998-03-01          NaN
-    1998-06-01          NaN
-    1998-09-01          NaN
-    1998-12-01   991.746591
-    1999-03-01   925.719318
-    1999-06-01  1021.092045
-    1999-09-01  1061.442045
-    1999-12-01  1017.423864
-    2000-03-01   980.742045
-    2000-06-01  1072.446591
-    2000-09-01  1090.787500
-    2000-12-01  1017.423864
+    1998-03-01   867.421428
+    1998-06-01  1017.292857
+    1998-09-01  1097.992857
+    1998-12-01  1017.292857
+    1999-03-01   913.535714
+    1999-06-01  1063.407143
+    1999-09-01  1126.814286
+    1999-12-01  1057.642857
+    2000-03-01  1000.000000
+    2000-06-01  1144.107143
+    2000-09-01  1172.928571
+    2000-12-01  1057.642857
 
 *	Release the memory allocated to the COM process (this does not happen automatically in interactive mode):
 
@@ -88,3 +88,7 @@ References
 ----------
 .. [BLO2001] Bloem, A.M, Dippelsman, R.J. and Maehle, N.O. 2001 Quarterly National Accounts Manual–Concepts, Data Sources, and Compilation. IMF. http://www.imf.org/external/pubs/ft/qna/2000/Textbook/index.htm
 
+Requirements
+------------
+*   **EViews**, of course
+*   comtypes, numpy, and pandas
