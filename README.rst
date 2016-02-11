@@ -7,13 +7,19 @@ Here’s a simple example going from Python to EViews.  We’re going to use the
  
 We’re going to create two series in Python using the time series functionality of the **pandas** package, transfer it to EViews, perform Chow-Lin interpolation on our series, and bring it back into Python.  The data are taken from [BLO2001]_ in an example originally meant for Denton interpolation.
 
-*	If you don’t have Python, we recommend the `Anaconda distribution <https://www.continuum.io/downloads>`_, which will include most of the packages we’ll need.  Alternatively, head over to the `Python Package Index <https://pypi.python.org/pypi>`_ and get the **pyeviews** `module <https://pypi.python.org/pypi/pyeviews>`_ by opening a Windows command line program (e.g., Command Prompt or PowerShell) and using the command:
+*	If you don’t have Python, we recommend the `Anaconda distribution <https://www.continuum.io/downloads>`_, which will include most of the packages we’ll need.  After installing Anaconda, open a Windows command line program (e.g., Command Prompt or PowerShell) and use the command:
+
+:: 
+
+    $ conda install -c bexer pyeviews
+
+to download and install **pyeviews**.  Alternatively, if you already have Python installed head over to the `Python Package Index <https://pypi.python.org/pypi>`_ and get the **pyeviews** `module <https://pypi.python.org/pypi/pyeviews>`_ by opening a Windows command line program and using the command:
 
 :: 
 
     $ pip install pyeviews
 
-or by downloading the package, navigating to your installation directory, and using the command
+or by downloading the package, navigating to your installation directory, and using the command:
 
 ::
 
@@ -39,6 +45,8 @@ or by downloading the package, navigating to your installation directory, and us
     >>> evp.PutPythonAsWF(benchmark, app=eviewsapp)
     >>> evp.PutPythonAsWF(indicator, app=eviewsapp, newwf=False)
 
+Behind the scenes, **pyeviews** will detect if the DatetimeIndex of your **pandas** object (if you have one) needs to be adjusted to match EViews' dating customs.  Since EViews assigns dates to be the beginning of a given period depending on the frequency, this can lead to misalignment issues and unexpected results when calculations are performed.  For example, a DatetimeIndex with an annual 'A' frequency and a date of 2000-12-31 will be assigned an internal EViews date of 2000-12-01.  In this case, **pyeviews** will adjust the date to 2000-01-01 before pushing the data to EViews.
+
 *	Name the pages of the workfile:
 
 .. code-block:: python
@@ -52,27 +60,27 @@ or by downloading the package, navigating to your installation directory, and us
 
 .. code-block:: python
 
-    >>> evp.Run('copy(rho=.7, c=chowlins, overwrite) annual\\benchmark quarterly\\benchmarked @indicator indicator', app=eviewsapp)
+    >>> evp.Run('copy(rho=.7, c=chowlins) annual\\benchmark quarterly\\benchmarked @indicator indicator', app=eviewsapp)
     
 *	Bring the new series back into Python:
 
 .. code-block:: python
 
-    >>> benchmarked = evp.GetWFAsPython(app=eviewsapp, pagename= 'quarterly', namefilter= 'benchmarked ')
+    >>> benchmarked = evp.GetWFAsPython(app=eviewsapp, pagename= 'quarterly', namefilter= 'benchmarked')
     >>> print benchmarked
                 BENCHMARKED
-    1998-03-01   867.421428
-    1998-06-01  1017.292857
-    1998-09-01  1097.992857
-    1998-12-01  1017.292857
-    1999-03-01   913.535714
-    1999-06-01  1063.407143
-    1999-09-01  1126.814286
-    1999-12-01  1057.642857
-    2000-03-01  1000.000000
-    2000-06-01  1144.107143
-    2000-09-01  1172.928571
-    2000-12-01  1057.642857
+    1998-01-01   867.421429
+    1998-04-01  1017.292857
+    1998-07-01  1097.992857
+    1998-10-01  1017.292857
+    1999-01-01   913.535714
+    1999-04-01  1063.407143
+    1999-07-01  1126.814286
+    1999-10-01  1057.642857
+    2000-01-01  1000.000000
+    2000-04-01  1144.107143
+    2000-07-01  1172.928571
+    2000-10-01  1057.642857
 
 *	Release the memory allocated to the COM process (this does not happen automatically in interactive mode):
 

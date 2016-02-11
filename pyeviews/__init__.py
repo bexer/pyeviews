@@ -13,6 +13,7 @@ def _BuildFromPython(objlen, newwf=True):
 
 def _BuildFromPandas(obj, newwf=True) :
     elem_cnt = len(obj)
+    # parse the frequency string
     freq_str_all = obj.freqstr
     pos = freq_str_all.find("-")
     freq_str = freq_str_all
@@ -20,7 +21,30 @@ def _BuildFromPandas(obj, newwf=True) :
     if (pos > 0) :
         freq_str = freq_str_all[:pos]
         freq_str_sp = '(' + freq_str_all[pos+1:] + ') '
-    
+    # - if necessary, convert index to be start of period since 
+    # EViews uses the beginning of the period and 
+    # we'll have misaligned dates in EViews otherwise
+    # - need to separate business freqs from regular otherwise get 
+    # misaligned subtractions/additions of dates
+    if freq_str == 'A':
+        dt = obj + pa.DateOffset(years = -1, days = 1)
+        return _BuildFromPandas(dt, newwf)
+    elif freq_str == 'BA':
+        dt = obj - pa.tseries.offsets.BYearEnd() + pa.tseries.offsets.BDay()
+        return _BuildFromPandas(dt, newwf)
+    elif freq_str == 'Q':
+        dt = obj - pa.tseries.offsets.QuarterEnd() + pa.DateOffset(days = 1)
+        return _BuildFromPandas(dt, newwf)
+    elif freq_str == 'BQ':
+        dt = obj - pa.tseries.offsets.BQuarterEnd() + pa.tseries.offsets.BDay()
+        return _BuildFromPandas(dt, newwf)
+    elif freq_str == 'M':
+        dt = obj - pa.tseries.offsets.MonthEnd() + pa.DateOffset(days = 1)
+        return _BuildFromPandas(dt, newwf)
+    elif freq_str == 'BM':
+        dt = obj - pa.tseries.offsets.BMonthEnd() + pa.tseries.offsets.BDay()     
+        return _BuildFromPandas(dt, newwf)
+    # first part of the EViews command
     result = "create " if newwf == True else "pagecreate "
     # construct the time period strings
     yr_begin = str(obj[0].year)
