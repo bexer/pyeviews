@@ -25,7 +25,7 @@ or by downloading the package, navigating to your installation directory, and us
 
     $ python setup.py install 
 
-*	Create two time series using pandas.  We’ll call the annual series “benchmark” and the quarterly series “indicator”:
+*	Start python and create two time series using pandas.  We’ll call the annual series “benchmark” and the quarterly series “indicator”:
 
 .. code-block:: python
 
@@ -68,19 +68,19 @@ Behind the scenes, **pyeviews** will detect if the DatetimeIndex of your **panda
 
     >>> benchmarked = evp.GetWFAsPython(app=eviewsapp, pagename= 'quarterly', namefilter= 'benchmarked')
     >>> print benchmarked
-                BENCHMARKED
-    1998-01-01   867.421429
-    1998-04-01  1017.292857
-    1998-07-01  1097.992857
-    1998-10-01  1017.292857
-    1999-01-01   913.535714
-    1999-04-01  1063.407143
-    1999-07-01  1126.814286
-    1999-10-01  1057.642857
-    2000-01-01  1000.000000
-    2000-04-01  1144.107143
-    2000-07-01  1172.928571
-    2000-10-01  1057.642857
+                    BENCHMARKED
+        1998-01-01   867.421429
+        1998-04-01  1017.292857
+        1998-07-01  1097.992857
+        1998-10-01  1017.292857
+        1999-01-01   913.535714
+        1999-04-01  1063.407143
+        1999-07-01  1126.814286
+        1999-10-01  1057.642857
+        2000-01-01  1000.000000
+        2000-04-01  1144.107143
+        2000-07-01  1172.928571
+        2000-10-01  1057.642857
 
 *	Release the memory allocated to the COM process (this does not happen automatically in interactive mode):
 
@@ -91,6 +91,34 @@ Behind the scenes, **pyeviews** will detect if the DatetimeIndex of your **panda
     >>> evp.Cleanup()
     
 Note that if you choose not to create a custom COM application object (the `GetEViewsApp` function), you won’t need to use the first two lines in the last step.  You only need to call `Cleanup()`.  If you create a custom object but choose not to show it, you won’t need to use the first line (the `Hide()` function).
+
+*	If you want, plot everything to see how the interpolated series follows the indicator series:
+
+.. code-block:: python
+
+    >>> # reindex the benchmarked series to the end of the quarter so the dates match those of the indicator series
+        benchmarked_reindexed = pa.Series(benchmarked.values.flatten(), index = benchmarked.index + pa.DateOffset(months = 3, days = -1))
+    >>> # plot
+        fig, ax1 = plt.subplots()
+        plt.xticks(rotation=70)
+        ax1.plot(benchmarked_reindexed, 'b-', label='benchmarked')
+        # multiply the indicator series by 10 to put it on the same axis as the benchmarked series
+        ax1.plot(indicator*10, 'b--', label='indicator*10') 
+        ax1.set_xlabel('dates')
+        ax1.set_ylabel('indicator & interpolated values', color='b')
+        ax1.xaxis.grid(True)
+        for tl in ax1.get_yticklabels():
+            tl.set_color('b')
+        plt.legend(loc='lower right')
+        ax2 = ax1.twinx()
+        ax2.set_ylim([3975, 4180])
+        ax2.plot(benchmark, 'ro', label='benchmark')
+        ax2.set_ylabel('benchmark', color='r')
+        for tl in ax2.get_yticklabels():
+            tl.set_color('r')
+        plt.legend(loc='upper left')
+        plt.title("Chow-Lin interpolation: \nannual sum of benchmarked = benchmark", fontsize=14)
+        plt.show()
 
 References
 ----------
