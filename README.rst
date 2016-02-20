@@ -96,6 +96,8 @@ Note that if you choose not to create a custom COM application object (the `GetE
 
 .. code-block:: python
 
+    >>> # load the matplotlib package to plot
+        import matplotlib.pyplot as plt
     >>> # reindex the benchmarked series to the end of the quarter so the dates match those of the indicator series
         benchmarked_reindexed = pa.Series(benchmarked.values.flatten(), index = benchmarked.index + pa.DateOffset(months = 3, days = -1))
     >>> # plot
@@ -119,6 +121,12 @@ Note that if you choose not to create a custom COM application object (the `GetE
         plt.legend(loc='upper left')
         plt.title("Chow-Lin interpolation: \nannual sum of benchmarked = benchmark", fontsize=14)
         plt.show()
+
+.. image:: example-python.png
+   :height: 100px
+   :width: 200 px
+   :scale: 100 %
+   :align: center
 
 References
 ----------
