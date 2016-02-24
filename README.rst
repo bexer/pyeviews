@@ -7,23 +7,25 @@ Here’s a simple example going from Python to EViews.  We’re going to use the
  
 We’re going to create two series in Python using the time series functionality of the **pandas** package, transfer it to EViews, perform Chow-Lin interpolation on our series, and bring it back into Python.  The data are taken from [BLO2001]_ in an example originally meant for Denton interpolation.
 
-*	If you don’t have Python, we recommend the `Anaconda distribution <https://www.continuum.io/downloads>`_, which will include most of the packages we’ll need.  After installing Anaconda, open a Windows command line program (e.g., Command Prompt or PowerShell) and use the command:
+*   Install the **pyeviews** package using your method of choice.  We like the `Anaconda distribution <https://www.continuum.io/downloads>`_, which includes most of the packages we’ll need.  Then, from a Windows command prompt:
 
 :: 
 
     $ conda install -c bexer pyeviews
 
-to download and install **pyeviews**.  Alternatively, if you already have Python installed head over to the `Python Package Index <https://pypi.python.org/pypi>`_ and get the **pyeviews** `module <https://pypi.python.org/pypi/pyeviews>`_ by opening a Windows command line program and using the command:
+Alternatively, if you're not using Anaconda head over to the **pyeviews** `package <https://pypi.python.org/pypi/pyeviews>`_ at the `Python Package Index <https://pypi.python.org/pypi>`_ and at a Windows command prompt:
 
 :: 
 
     $ pip install pyeviews
 
-or by downloading the package, navigating to your installation directory, and using the command:
+Or, download the package, navigate to your installation directory, and use:
 
 ::
 
     $ python setup.py install 
+
+For more details on installation, see our `whitepaper <http:\www.eviews.com\download\whitepapers\pyeviews.pdf>`_.
 
 *	Start python and create two time series using pandas.  We’ll call the annual series “benchmark” and the quarterly series “indicator”:
 
@@ -127,6 +129,8 @@ Note that if you choose not to create a custom COM application object (the `GetE
    :width: 200 px
    :scale: 100 %
    :align: center
+
+For more information on the **pyeviews** package, including a list of functions, please take a look at our `whitepaper <http:\www.eviews.com\download\whitepapers\pyeviews.pdf>`_ on the subject.
 
 References
 ----------

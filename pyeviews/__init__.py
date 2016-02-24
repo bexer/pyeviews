@@ -5,6 +5,7 @@ import fnmatch
 import gc
 from pkg_resources import get_distribution, DistributionNotFound
 import os.path
+import re
 
 try:
     _dist = get_distribution('pyeviews')
@@ -31,6 +32,12 @@ def _BuildFromPandas(obj, newwf=True) :
     elem_cnt = len(obj)
     # parse the frequency string
     freq_str_all = obj.freqstr
+    # check frequency string for custom spacing
+    spacing = None
+    search_obj = re.search(r'(\d*)(.*)', freq_str_all)
+    if search_obj:
+        spacing = search_obj.group(1)
+        freq_str_all = search_obj.group(2)
     pos = freq_str_all.find("-")
     freq_str = freq_str_all
     freq_str_sp = ' '
@@ -86,51 +93,50 @@ def _BuildFromPandas(obj, newwf=True) :
                str(obj.minute.max().item()) + ':' + \
                str(obj.second.max().item())    
     # yearly
-    if (freq_str == 'AS' or freq_str == 'A' or freq_str == 'BAS' or 
-            freq_str == 'BA'):
-        result = result + 'a' + freq_str_sp + date_begin + date_end
+    if (freq_str in ['AS', 'A', 'BAS', 'BA'] and (not spacing or
+        spacing in ['2', '3', '4', '5', '6', '7', '8', '9', '10', '20'])):
+            result = result + spacing + 'a' + freq_str_sp + date_begin + date_end
     # quarterly
-    elif (freq_str == 'QS' or freq_str == 'Q' or freq_str == 'BQS' or 
-            freq_str == 'BQ'):
+    elif (freq_str in ['QS', 'Q', 'BQS', 'BQ'] and not spacing):
         result = result + 'q' + freq_str_sp + date_begin + date_end
     # monthly
-    elif (freq_str == 'MS' or freq_str == 'M' or freq_str == 'BMS' or 
-            freq_str == 'BM' or freq_str == 'CBMS' or freq_str == 'CBM'): 
+    elif (freq_str in ['MS', 'M', 'BMS', 'BM', 'CBMS', 'CBM'] and not spacing): 
         result = result + 'm' + freq_str_sp  + date_begin + date_end
     # weekly
-    elif (freq_str == 'W'): 
+    elif (freq_str == 'W' and not spacing): 
         result = result + 'w' + freq_str_sp + date_begin + date_end
     # daily
-    elif (freq_str=='D'):
+    elif (freq_str=='D' and not spacing):
         result = result + 'd7' + freq_str_sp + date_begin + date_end
     # daily (business days)
-    elif (freq_str == 'B'):
+    elif (freq_str == 'B' and not spacing):
         result = result + 'd5' + freq_str_sp + date_begin + date_end
     # daily (custom days)
-    elif (freq_str == 'C'):
+    elif (freq_str == 'C' and not spacing):
         result = result + 'd(' + dow_begin + ',' + dow_end + ') ' + \
                  freq_str_sp + date_begin + date_end    
     # hourly
-    elif (freq_str == 'H' or freq_str == 'BH'):
-        result = result + 'h(' + dow_begin + '-' + dow_end + ', ' + \
-                 time_min + '-' + time_max + ') ' + \
-                 date_begin + time_begin + date_end + time_end
+    elif (freq_str in ['H', 'BH'] and (not spacing or 
+        spacing in ['2', '4', '6', '8', '12'])):
+            result = result + spacing + 'h(' + dow_begin + '-' + dow_end + \
+                     ', ' + time_min + '-' + time_max + ') ' + \
+                     date_begin + time_begin + date_end + time_end
     # minutes
-    elif (freq_str == 'T' or freq_str == 'min'):
-        result = result + 'Min(' + dow_begin + '-' + dow_end + ', ' + \
-                 time_min + '-' + time_max + ') ' + \
-                 date_begin + time_begin + date_end + time_end
+    elif (freq_str in ['T', 'min'] and (not spacing or 
+        spacing in ['2', '5', '10', '15', '20', '30'])):
+            result = result + spacing + 'Min(' + dow_begin + '-' + dow_end + \
+                    ', ' + time_min + '-' + time_max + ') ' + \
+                     date_begin + time_begin + date_end + time_end
     # seconds
-    elif (freq_str == 'S'):
-        result = result + 'Sec(' + dow_begin + '-' + dow_end + ', ' + \
-                 time_min + '-' + time_max + ') ' + \
-                 date_begin + time_begin + date_end + time_end
+    elif (freq_str == 'S' and (not spacing or spacing in ['5', '15', '30'])):
+            result = result + spacing + 'Sec(' + dow_begin + '-' + dow_end + \
+                    ', ' + time_min + '-' + time_max + ') ' + \
+                     date_begin + time_begin + date_end + time_end
     # EViews doesn't support these frequencies
-    elif (freq_str == 'L' or freq_str == 'ms' or freq_str == 'U' or 
-            freq_str == 'us' or freq_str == 'N'):
+    elif (freq_str in ['L', 'ms', 'U', 'us', 'N']):
         raise ValueError('Frequency ' + freq_str + ' is unsupported.')
-    else :
-        raise ValueError('Unrecognized frequency: ' + freq_str)
+    else:
+        raise ValueError('Unrecognized frequency: ' + spacing + freq_str)
     return result   
     
 def _CheckReservedNames(names):
