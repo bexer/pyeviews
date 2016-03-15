@@ -3,22 +3,11 @@ import numpy as np
 import pandas as pa
 import fnmatch
 import gc
-from pkg_resources import get_distribution, DistributionNotFound
-import os.path
+from pkg_resources import get_distribution
 import re
 
-try:
-    _dist = get_distribution('pyeviews')
-    # Windows
-    dist_loc = os.path.normcase(_dist.location)
-    here = os.path.normcase(__file__)
-    if not here.startswith(os.path.join(dist_loc, 'pyeviews')):
-        # not installed, but there is another version that *is*
-        raise DistributionNotFound
-except DistributionNotFound:
-    __version__ = 'Please install this project with setup.py'
-else:
-    __version__ = _dist.version
+_dist = get_distribution('pyeviews')
+__version__ = _dist.version
 
 # default app if users don't want to sprcify their own
 globalevapp = None
@@ -49,6 +38,8 @@ def _BuildFromPandas(obj, newwf=True) :
     # we'll have misaligned dates in EViews otherwise
     # - need to separate business freqs from regular otherwise get 
     # misaligned subtractions/additions of dates
+    # - note that the DateOffset calculations (sometimes?) give performance warnings
+    # fix with resample?
     if freq_str == 'A':
         dt = obj + pa.DateOffset(years = -1, days = 1)
         return _BuildFromPandas(dt, newwf)
@@ -95,7 +86,10 @@ def _BuildFromPandas(obj, newwf=True) :
     # yearly
     if (freq_str in ['AS', 'A', 'BAS', 'BA'] and (not spacing or
         spacing in ['2', '3', '4', '5', '6', '7', '8', '9', '10', '20'])):
-            result = result + spacing + 'a' + freq_str_sp + date_begin + date_end
+            # month alignment not allowed for multi-year freqs in EViews
+            result = result + spacing + 'a ' + date_begin + date_end
+    elif (freq_str in ['AS', 'A', 'BAS', 'BA'] and not spacing):
+        result = result + 'a' + freq_str_sp + date_begin + date_end
     # quarterly
     elif (freq_str in ['QS', 'Q', 'BQS', 'BQ'] and not spacing):
         result = result + 'q' + freq_str_sp + date_begin + date_end
@@ -121,6 +115,8 @@ def _BuildFromPandas(obj, newwf=True) :
             result = result + spacing + 'h(' + dow_begin + '-' + dow_end + \
                      ', ' + time_min + '-' + time_max + ') ' + \
                      date_begin + time_begin + date_end + time_end
+            if spacing:
+                warnings.warn("Hourly pandas DatetimeIndex may not be exactly replicated in EViews.  See EViews documentation for details.")
     # minutes
     elif (freq_str in ['T', 'min'] and (not spacing or 
         spacing in ['2', '5', '10', '15', '20', '30'])):

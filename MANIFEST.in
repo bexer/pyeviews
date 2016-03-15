@@ -3,3 +3,6 @@ include README.rst
 
 # Include the license file
 include LICENSE.txt
+
+# Include the image file
+include example-python.png

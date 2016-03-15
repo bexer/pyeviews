@@ -25,7 +25,7 @@ Or, download the package, navigate to your installation directory, and use:
 
     $ python setup.py install 
 
-For more details on installation, see our `whitepaper <http:\www.eviews.com\download\whitepapers\pyeviews.pdf>`_.
+For more details on installation, see our `whitepaper <http://www.eviews.com/download/whitepapers/pyeviews.pdf>`_.
 
 *	Start python and create two time series using pandas.  We’ll call the annual series “benchmark” and the quarterly series “indicator”:
 
@@ -126,11 +126,11 @@ Note that if you choose not to create a custom COM application object (the `GetE
 
 .. image:: example-python.png
    :height: 100px
-   :width: 200 px
+   :width: 200px
    :scale: 100 %
    :align: center
 
-For more information on the **pyeviews** package, including a list of functions, please take a look at our `whitepaper <http:\www.eviews.com\download\whitepapers\pyeviews.pdf>`_ on the subject.
+For more information on the **pyeviews** package, including a list of functions, please take a look at our `whitepaper <http://www.eviews.com/download/whitepapers/pyeviews.pdf>`_ on the subject.
 
 References
 ----------
