@@ -17,7 +17,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 #        return f.read()
         
 setup(name='pyeviews',
-      version='0.1.8',
+      version='0.1.10',
       description='Data import/export and EViews function calls from Python',
       long_description=long_description,
       classifiers=['Development Status :: 4 - Beta',

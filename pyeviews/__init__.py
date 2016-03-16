@@ -5,11 +5,12 @@ import fnmatch
 import gc
 from pkg_resources import get_distribution
 import re
+import warnings
 
 _dist = get_distribution('pyeviews')
 __version__ = _dist.version
 
-# default app if users don't want to sprcify their own
+# default app if users don't want to specify their own
 globalevapp = None
 
 def _BuildFromPython(objlen, newwf=True):
@@ -84,8 +85,8 @@ def _BuildFromPandas(obj, newwf=True) :
                str(obj.minute.max().item()) + ':' + \
                str(obj.second.max().item())    
     # yearly
-    if (freq_str in ['AS', 'A', 'BAS', 'BA'] and (not spacing or
-        spacing in ['2', '3', '4', '5', '6', '7', '8', '9', '10', '20'])):
+    if (freq_str in ['AS', 'A', 'BAS', 'BA'] and 
+        spacing in ['2', '3', '4', '5', '6', '7', '8', '9', '10', '20']):
             # month alignment not allowed for multi-year freqs in EViews
             result = result + spacing + 'a ' + date_begin + date_end
     elif (freq_str in ['AS', 'A', 'BAS', 'BA'] and not spacing):
