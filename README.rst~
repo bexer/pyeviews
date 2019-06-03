@@ -124,7 +124,7 @@ Note that if you choose not to create a custom COM application object (the `GetE
         plt.title("Chow-Lin interpolation: \nannual sum of benchmarked = benchmark", fontsize=14)
         plt.show()
 
-.. image:: https://github.com/bexer/pyeviews/blob/master/example-python.png
+.. image:: example-python.png
    :height: 100px
    :width: 200px
    :scale: 100 %

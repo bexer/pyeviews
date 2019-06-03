@@ -8,8 +8,8 @@ from comtypes.client import CreateObject
 import numpy as np
 import pandas as pa
 
-#_dist = get_distribution('pyeviews')
-#__version__ = _dist.version
+_dist = get_distribution('pyeviews')
+__version__ = _dist.version
 
 # default app if users don't want to specify their own
 globalevapp = None

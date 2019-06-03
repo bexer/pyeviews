@@ -8,8 +8,8 @@ from comtypes.client import CreateObject
 import numpy as np
 import pandas as pa
 
-#_dist = get_distribution('pyeviews')
-#__version__ = _dist.version
+_dist = get_distribution('pyeviews')
+__version__ = _dist.version
 
 # default app if users don't want to specify their own
 globalevapp = None
@@ -127,7 +127,7 @@ def _BuildFromPandas(obj, newwf=True):
                      ', ' + time_min + ' - ' + time_max + ') ' + \
                      date_begin + time_begin + date_end + time_end
             if spacing:
-            logging.warning("The hourly DatetimeIndex may not be exactly \
+            logging.warning("Hourly pandas DatetimeIndex may not be exactly \
 replicated in EViews.")
     # minutes
     elif (freq_str in ['T', 'min'] and (not spacing or \
@@ -290,7 +290,7 @@ def GetWFAsPython(app=None, wfname='', pagename='', namefilter='*'):
         #get index series
         dates = app.GetSeries("@date")
         idx = pa.DatetimeIndex(dates)
-    elif freq_str in ['H', 'Min', 'Sec']: 
+    elif freq_str in ['H', 'Min', 'Sec']:
         #get index series
         dates = app.GetSeries("@date")
         idx = pa.DatetimeIndex(dates)
@@ -303,7 +303,7 @@ replicated in pandas.")
 replicated in pandas.")
         if spacing and fnmatch.fnmatch(pgfreq, '*Sec(*)'):
             logging.warning("Custom seconds frequencies in EViews may not be exactly \
-replicated in pandas.")           
+replicated in pandas.")
     elif (pgfreq in ['D5', '5', 'D7', '7'] or
                     fnmatch.fnmatch(pgfreq, 'D(*)')):
         #get index series
