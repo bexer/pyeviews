@@ -2,7 +2,7 @@
 import fnmatch
 import gc
 import re
-import warnings
+import logging
 from pkg_resources import get_distribution
 from comtypes.client import CreateObject
 import numpy as np
@@ -73,8 +73,15 @@ def _BuildFromPandas(obj, newwf=True):
     day_end = str(obj[elem_cnt - 1].day)
     date_begin = mo_begin + '/' + day_begin + '/' + yr_begin + ' '
     date_end = mo_end + '/' + day_end + '/' + yr_end + ' '
-    dow_begin = str(obj[0].dayofweek + 1) # EV d.o.w. has Mon = 1
-    dow_end = str(obj[elem_cnt - 1].dayofweek + 1)
+    # may need some extra processing for custom business days
+    missingbdays = _MissingElements(list(set(obj.dayofweek)))
+    # +1 for first custom day in sequence, +1 bc EV d.o.w. has Mon = 1
+    if missingbdays:
+        dow_begin = str(missingbdays[-1] + 1 + 1) 
+        dow_end = str(missingbdays[0])
+    else:
+        dow_begin = str(obj.dayofweek.min() + 1)
+        dow_end = str(obj.dayofweek.max() + 1)
     time_begin = str(obj[0].strftime('%H')) + ':' + \
                  str(obj[0].strftime('%M')) + ':' + \
                  str(obj[0].strftime('%S')) + ' '
@@ -120,9 +127,8 @@ def _BuildFromPandas(obj, newwf=True):
                      ', ' + time_min + ' - ' + time_max + ') ' + \
                      date_begin + time_begin + date_end + time_end
             if spacing:
-            warnings.warn("Hourly pandas DatetimeIndex may not be exactly \
-                              replicated in EViews.  See EViews documentation \
-                              for details.")
+            logging.warning("The hourly DatetimeIndex may not be exactly \
+replicated in EViews.")
     # minutes
     elif (freq_str in ['T', 'min'] and (not spacing or \
         spacing in ['2', '5', '10', '15', '20', '30'])):
@@ -238,23 +244,23 @@ def PutPythonAsWF(obj, app=None, newwf=True):
                 app.PutSeries(name, data)
         else:
             for col_num in range(obj.shape[1]):
-            name = "series" + str(col_num)
+                name = "series" + str(col_num)
                 data = obj[:, col_num].tolist()
-            app.PutSeries(name, data)        
+                app.PutSeries(name, data)        
     else:
         raise ValueError('Unsupported type: ' + str(type(obj)))
 
 def GetWFAsPython(app=None, wfname='', pagename='', namefilter='*'):
     """Move EViews data to Python."""
     app = _GetApp(app)
-    # being lazy here and storing duplicate keys for completeness
-    dt_map = {'D5':'B', '5':'B', 'D7':'C', 'D7':'D', '7':'D', 'D':'C',
-              'W':'W', 'M':'MS', 'Q':'QS', 'A':'AS', 'Y':'AS', 
-              'H':'H', 'Min':'T', 'Min':'min', 'Sec':'S'}
+    # EViews : pandas
+    dt_map = {'D5':'B', '5':'B', 'D7':'D', '7':'D', 'D':'D',
+              'W':'W', 'T':'10D', 'F':'2W', 'M':'MS', 'Q':'QS',
+              'S':'6M', 'A':'AS', 'Y':'AS',
+              'H':'H', 'Min':'T', 'Sec':'S'} # also 'D7':'D', 'Min':'min'
     # load the workfile 
     if wfname != '':
         app.Run("wfuse " + wfname) # needs full pathname
-    
     if pagename:
         #change workfile page to specified page name
         if app.Get('=@pageexist("' + str(pagename) + '")') == 1:
@@ -271,21 +277,45 @@ def GetWFAsPython(app=None, wfname='', pagename='', namefilter='*'):
     snames = app.Lookup(namefilter, "series", 1)
     if not snames:
         raise ValueError('No series objects found.')
-    # build Datetimeindex object
-    if pgfreq in ['2Y', '3Y', '4Y', '5Y', '6Y', '7Y', '8Y', '9Y', '10Y', '20Y',
-                  'S', 'BM', 'F', 'T', '2H', '4H', '6H', '8H', '12H',
-                  '2Min', '5Min', '10Min', '15Min', '20Min', '30Min',
-                  '5Sec', '15Sec', '30Sec']:
-        raise ValueError(pgfreq + ' is not supported in pandas.')
-    elif (pgfreq in ['D5', '5', 'D7', 'D7', '7', 'D',
-                    'W', 'M', 'Q', 'A', 'Y', 'H', 'Min', 'Min', 'Sec'] or 
+    # build DatetimeIndex object
+    search_obj = re.search(r'(\d*)(\w*)', pgfreq)
+    if search_obj:
+        spacing = search_obj.group(1)
+        freq_str = search_obj.group(2)
+    if (freq_str in ['F', 'M', 'Q', 'S', 'A', 'Y']):
+        #get index series
+        dates = app.GetSeries("@date")
+        idx = pa.DatetimeIndex(dates, freq=spacing + dt_map[freq_str])
+    elif freq_str == 'W': # might be improved w/ w(*) parsing, ok for now
+        #get index series
+        dates = app.GetSeries("@date")
+        idx = pa.DatetimeIndex(dates)
+    elif freq_str in ['H', 'Min', 'Sec']: 
+        #get index series
+        dates = app.GetSeries("@date")
+        idx = pa.DatetimeIndex(dates)
+        #idx.freq = pa.tseries.frequencies.to_offset(spacing + 'H')
+        if spacing and fnmatch.fnmatch(pgfreq, '*H(*)'):
+            logging.warning("Custom hourly frequencies in EViews may not be exactly \
+replicated in pandas.")
+        if spacing and fnmatch.fnmatch(pgfreq, '*Min(*)'):
+            logging.warning("Custom minute frequencies in EViews may not be exactly \
+replicated in pandas.")
+        if spacing and fnmatch.fnmatch(pgfreq, '*Sec(*)'):
+            logging.warning("Custom seconds frequencies in EViews may not be exactly \
+replicated in pandas.")           
+    elif (pgfreq in ['D5', '5', 'D7', '7'] or
                     fnmatch.fnmatch(pgfreq, 'D(*)')):
         #get index series
         dates = app.GetSeries("@date")
         if fnmatch.fnmatch(pgfreq, 'D(*)'):
-            idx = pa.DatetimeIndex(dates, freq='C')
+            idx = pa.DatetimeIndex(dates)
+            # unable to set following? - freq left as None!
+            #idx.freq = pa.tseries.frequencies.to_offset('C')
         else:
             idx = pa.DatetimeIndex(dates, freq=dt_map[pgfreq])
+    elif pgfreq == '20Y':
+        raise ValueError('Frequency ' + pgfreq + ' is not supported in pandas.')
     elif pgfreq == 'U':
         pass
     else:
@@ -294,20 +324,18 @@ def GetWFAsPython(app=None, wfname='', pagename='', namefilter='*'):
     snames_str = app.Lookup(namefilter, "series")
     # retrieve all series data as a single call
     grp = app.GetGroup(snames_str, "@all")
-    if (pgfreq in ['D5', '5', 'D7', 'D7', '7', 'D', \
-                   'W', 'M', 'Q', 'A', 'Y', 'H', 'Min', 'Min', 'Sec'] or \
-                   fnmatch.fnmatch(pgfreq, 'D(*)')):
+    if pgfreq == 'U':
+        # for undated workfiles we don't pass in an index
+        dfr = pa.DataFrame(columns=list(snames))
+        # for each series name, extract the data from our grp array
+        for sindex in range(len(snames)):
+            dfr[snames[sindex]] = [col[sindex] for col in grp]
+        data = dfr
+    else:
         # for dated workfiles create the dataframe
         # build dataframe with empty columns 
         dfr = pa.DataFrame(index=idx, columns=list(snames))
         #for each series name, extract the data from our grp array
-        for sindex in range(len(snames)):
-            dfr[snames[sindex]] = [col[sindex] for col in grp]
-        data = dfr
-    elif pgfreq == 'U':
-        # for undated workfiles we don't pass in an index
-        dfr = pa.DataFrame(columns=list(snames))
-        # for each series name, extract the data from our grp array
         for sindex in range(len(snames)):
             dfr[snames[sindex]] = [col[sindex] for col in grp]
         data = dfr
@@ -362,3 +390,9 @@ def Get(objname, app=None):
     """Retrieve the results of EViews commands."""
     app = _GetApp(app)
     return app.Get(objname)
+
+def _MissingElements(listy):
+    """Find missing elements in a sorted integer sequence.
+    From: https://stackoverflow.com/questions/16974047/efficient-way-to-find-missing-elements-in-an-integer-sequence"""
+    start, end = listy[0], listy[-1]
+    return sorted(set(range(start, end + 1)).difference(listy))
