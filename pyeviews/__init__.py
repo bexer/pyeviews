@@ -127,7 +127,7 @@ def _BuildFromPandas(obj, newwf=True):
                      ', ' + time_min + ' - ' + time_max + ') ' + \
                      date_begin + time_begin + date_end + time_end
             if spacing:
-            logging.warning("The hourly DatetimeIndex may not be exactly \
+                logging.warning("The hourly DatetimeIndex may not be exactly \
 replicated in EViews.")
     # minutes
     elif (freq_str in ['T', 'min'] and (not spacing or \
