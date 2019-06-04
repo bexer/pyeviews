@@ -127,7 +127,7 @@ def _BuildFromPandas(obj, newwf=True):
                      ', ' + time_min + ' - ' + time_max + ') ' + \
                      date_begin + time_begin + date_end + time_end
             if spacing:
-            logging.warning("Hourly pandas DatetimeIndex may not be exactly \
+                logging.warning("Hourly pandas DatetimeIndex may not be exactly \
 replicated in EViews.")
     # minutes
     elif (freq_str in ['T', 'min'] and (not spacing or \
@@ -275,6 +275,8 @@ def GetWFAsPython(app=None, wfname='', pagename='', namefilter='*'):
     ispanel = app.Get("=@ispanel")
     # get series names as a 1-dim array
     snames = app.Lookup(namefilter, "series", 1)
+    anames = app.Lookup(namefilter, "alpha", 1)
+    names = snames + anames
     if not snames:
         raise ValueError('No series objects found.')
     # build DatetimeIndex object
@@ -320,16 +322,16 @@ replicated in pandas.")
         pass
     else:
         raise ValueError('Unsupported workfile frequency: ' + pgfreq)
-    # get series names as a space delimited string
-    snames_str = app.Lookup(namefilter, "series")
-    # retrieve all series data as a single call
-    grp = app.GetGroup(snames_str, "@all")
+    # convert series names to a space delimited string
+    names_str = ' '.join(names)
+    # retrieve all series+alpha data as a single call
+    grp = app.GetGroup(names_str, "@all")
     if pgfreq == 'U':
         # for undated workfiles we don't pass in an index
-        dfr = pa.DataFrame(columns=list(snames))
+        dfr = pa.DataFrame(columns=list(names))
         # for each series name, extract the data from our grp array
-        for sindex in range(len(snames)):
-            dfr[snames[sindex]] = [col[sindex] for col in grp]
+        for sindex in range(len(names)):
+            dfr[names[sindex]] = [col[sindex] for col in grp]
         data = dfr
     else:
         # for dated workfiles create the dataframe

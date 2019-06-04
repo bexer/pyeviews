@@ -2,7 +2,7 @@
 import fnmatch
 import gc
 import re
-import warnings
+import logging
 from pkg_resources import get_distribution
 from comtypes.client import CreateObject
 import numpy as np
@@ -127,7 +127,7 @@ def _BuildFromPandas(obj, newwf=True):
                      ', ' + time_min + ' - ' + time_max + ') ' + \
                      date_begin + time_begin + date_end + time_end
             if spacing:
-            warnings.warn("The hourly DatetimeIndex may not be exactly \
+                logging.warning("Hourly pandas DatetimeIndex may not be exactly \
 replicated in EViews.")
     # minutes
     elif (freq_str in ['T', 'min'] and (not spacing or \
@@ -282,19 +282,28 @@ def GetWFAsPython(app=None, wfname='', pagename='', namefilter='*'):
     if search_obj:
         spacing = search_obj.group(1)
         freq_str = search_obj.group(2)
-    if (freq_str in ['F', 'M', 'Q', 'S', 'A', 'Y', 'Min', 'Sec']):
+    if (freq_str in ['F', 'M', 'Q', 'S', 'A', 'Y']):
         #get index series
         dates = app.GetSeries("@date")
         idx = pa.DatetimeIndex(dates, freq=spacing + dt_map[freq_str])
-    elif (freq_str == 'W'): # might be improved w/ w(*) parsing, ok for now
+    elif freq_str == 'W': # might be improved w/ w(*) parsing, ok for now
         #get index series
         dates = app.GetSeries("@date")
         idx = pa.DatetimeIndex(dates)
-    elif (freq_str == 'H' and not spacing): # may want to add Min, Sec?
+    elif freq_str in ['H', 'Min', 'Sec']:
         #get index series
         dates = app.GetSeries("@date")
-        idx = pa.DatetimeIndex(dates, freq='H')
-        #idx.freq = pa.tseries.frequencies.to_offset(spacing + dt_map[freq_str])
+        idx = pa.DatetimeIndex(dates)
+        #idx.freq = pa.tseries.frequencies.to_offset(spacing + 'H')
+        if spacing and fnmatch.fnmatch(pgfreq, '*H(*)'):
+            logging.warning("Custom hourly frequencies in EViews may not be exactly \
+replicated in pandas.")
+        if spacing and fnmatch.fnmatch(pgfreq, '*Min(*)'):
+            logging.warning("Custom minute frequencies in EViews may not be exactly \
+replicated in pandas.")
+        if spacing and fnmatch.fnmatch(pgfreq, '*Sec(*)'):
+            logging.warning("Custom seconds frequencies in EViews may not be exactly \
+replicated in pandas.")
     elif (pgfreq in ['D5', '5', 'D7', '7'] or
                     fnmatch.fnmatch(pgfreq, 'D(*)')):
         #get index series
@@ -382,8 +391,8 @@ def Get(objname, app=None):
     app = _GetApp(app)
     return app.Get(objname)
 
-def _MissingElements(L):
+def _MissingElements(listy):
     """Find missing elements in a sorted integer sequence.
     From: https://stackoverflow.com/questions/16974047/efficient-way-to-find-missing-elements-in-an-integer-sequence"""
-    start, end = L[0], L[-1]
-    return sorted(set(range(start, end + 1)).difference(L))
+    start, end = listy[0], listy[-1]
+    return sorted(set(range(start, end + 1)).difference(listy))
