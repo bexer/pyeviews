@@ -9,9 +9,9 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
     
 #def readme():
-#    with open('README.rst') as f:
+#    with open('README.rst', encoding='utf-8') as f:
 #        return f.read()
-#        
+        
 #def licensefile():
 #    with open('LICENSE.txt') as f:
 #        return f.read()
@@ -20,6 +20,7 @@ setup(name='pyeviews',
       version='1.0.0',
       description='Data import/export and EViews function calls from Python',
       long_description=long_description,
+      long_description_content_type='text/x-rst',
       classifiers=['Development Status :: 5 - Production/Stable',
                    'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
                    'Topic :: Scientific/Engineering :: Information Analysis',
@@ -28,8 +29,8 @@ setup(name='pyeviews',
                    'Operating System :: Microsoft :: Windows'],
       keywords='eviews econometrics',
       url='https://github.com/bexer/pyeviews',
-      author='Rebecca Erwin',
-      author_email='rebecca.erwin@ihsmarkit.com',
+      author='IHS EViews',
+      author_email='pyeviews@yahoo.com',
       license='GPLv3',
       packages=['pyeviews'],
       install_requires=['comtypes','numpy','pandas'],

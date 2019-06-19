@@ -1,19 +1,13 @@
-pyeviews: Python & EViews
+pyeviews: EViews & Python
 =========================
 
 The purpose of the **pyeviews** package is to make it easier for `EViews <http://www.eviews.com>`_ and Python to talk to each other, so Python programmers can use the econometric engine of EViews directly from Python.  This package uses COM to transfer data between Python and EViews.  (For more information on COM and EViews, take a look at our `whitepaper on the subject <http://www.eviews.com/download/whitepapers/EViews_COM_Automation.pdf>`_.)
-    
-Here’s a simple example going from Python to EViews.  We’re going to use the popular Chow-Lin interpolation routine in EViews using data created in Python.  Chow-Lin interpolation is a regression-based technique to transform low-frequency data (in our example, annual) into higher-frequency data (in our example, quarterly).  It has the ability to use a higher-frequency series as a pattern for the interpolated series to follow.   The quarterly interpolated series is chosen to match the annual benchmark series in one of four ways: first (the first quarter value of the interpolated series matches the annual series), last (same, but for the fourth quarter value), sum (the sum of the first through fourth quarters matches the annual series), and average (the average of the first through fourth quarters matches the annual series).
- 
-We’re going to create two series in Python using the time series functionality of the **pandas** package, transfer it to EViews, perform Chow-Lin interpolation on our series, and bring it back into Python.  The data are taken from [BLO2001]_ in an example originally meant for Denton interpolation.
 
-*   Install the **pyeviews** package using your method of choice.  We like the `Anaconda distribution <https://www.continuum.io/downloads>`_, which includes most of the packages we’ll need.  Then, from a Windows command prompt:
+Here's a simple example going from Python to EViews.  We're going to use the popular Chow-Lin interpolation routine in EViews using data created in Python.  Chow-Lin interpolation is a regression-based technique to transform low-frequency data (in our example, annual) into higher-frequency data (in our example, quarterly).  It has the ability to use a higher-frequency series as a pattern for the interpolated series to follow.   The quarterly interpolated series is chosen to match the annual benchmark series in one of four ways: first (the first quarter value of the interpolated series matches the annual series), last (same, but for the fourth quarter value), sum (the sum of the first through fourth quarters matches the annual series), and average (the average of the first through fourth quarters matches the annual series).
 
-:: 
+We're going to create two series in Python using the time series functionality of the **pandas** package, transfer it to EViews, perform Chow-Lin interpolation on our series, and bring it back into Python.  The data are taken from [BLO2001]_ in an example originally meant for Denton interpolation.
 
-    $ conda install -c bexer pyeviews
-
-Alternatively, if you're not using Anaconda head over to the **pyeviews** `package <https://pypi.python.org/pypi/pyeviews>`_ at the `Python Package Index <https://pypi.python.org/pypi>`_ and at a Windows command prompt:
+*   Install the **pyeviews** package using your method of choice.  For example, head over to the **pyeviews** `package <https://pypi.python.org/pypi/pyeviews>`_ at the `Python Package Index <https://pypi.python.org/pypi>`_ and at a Windows command prompt:
 
 :: 
 
@@ -27,7 +21,7 @@ Or, download the package, navigate to your installation directory, and use:
 
 For more details on installation, see our `whitepaper <http://www.eviews.com/download/whitepapers/pyeviews.pdf>`_.
 
-*	Start python and create two time series using pandas.  We’ll call the annual series “benchmark” and the quarterly series “indicator”:
+*	Start python and create two time series using pandas.  We'll call the annual series "benchmark" and the quarterly series "indicator":
 
 .. code-block:: python
 
@@ -69,7 +63,7 @@ Behind the scenes, **pyeviews** will detect if the DatetimeIndex of your **panda
 .. code-block:: python
 
     >>> benchmarked = evp.GetWFAsPython(app=eviewsapp, pagename= 'quarterly', namefilter= 'benchmarked')
-    >>> print benchmarked
+    >>> print(benchmarked)
                     BENCHMARKED
         1998-01-01   867.421429
         1998-04-01  1017.292857
@@ -91,8 +85,8 @@ Behind the scenes, **pyeviews** will detect if the DatetimeIndex of your **panda
     >>> eviewsapp.Hide()
     >>> eviewsapp = None
     >>> evp.Cleanup()
-    
-Note that if you choose not to create a custom COM application object (the `GetEViewsApp` function), you won’t need to use the first two lines in the last step.  You only need to call `Cleanup()`.  If you create a custom object but choose not to show it, you won’t need to use the first line (the `Hide()` function).
+
+Note that if you choose not to create a custom COM application object (the `GetEViewsApp` function), you won't need to use the first two lines in the last step.  You only need to call `Cleanup()`.  If you create a custom object but choose not to show it, you won't need to use the first line (the `Hide()` function).
 
 *	If you want, plot everything to see how the interpolated series follows the indicator series:
 
@@ -125,16 +119,16 @@ Note that if you choose not to create a custom COM application object (the `GetE
         plt.show()
 
 .. image:: https://github.com/bexer/pyeviews/blob/master/example-python.png
-   :height: 100px
-   :width: 200px
-   :scale: 100 %
-   :align: center
+    :height: 100px
+    :width: 200px
+    :scale: 100 %
+    :align: center
 
 For more information on the **pyeviews** package, including a list of functions, please take a look at our `whitepaper <http://www.eviews.com/download/whitepapers/pyeviews.pdf>`_ on the subject.
 
 References
 ----------
-.. [BLO2001] Bloem, A.M, Dippelsman, R.J. and Maehle, N.O. 2001 Quarterly National Accounts Manual–Concepts, Data Sources, and Compilation. IMF. http://www.imf.org/external/pubs/ft/qna/2000/Textbook/index.htm
+.. [BLO2001] Bloem, A.M, Dippelsman, R.J. and Maehle, N.O. 2001 Quarterly National Accounts Manual - Concepts, Data Sources, and Compilation. IMF. http://www.imf.org/external/pubs/ft/qna/2000/Textbook/index.htm
 
 Requirements
 ------------
