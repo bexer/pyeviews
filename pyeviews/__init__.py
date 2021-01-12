@@ -45,22 +45,28 @@ def _BuildFromPandas(obj, newwf=True):
     # - note that the DateOffset calculations (sometimes?) give performance warnings
     # fix with resample?
     if freq_str == 'A':
-        dtr = obj + pa.DateOffset(years=-1, days=1)
+        dtr = pa.DatetimeIndex(obj + pa.DateOffset(years=-1, days=1), 
+                               freq = "infer")
         return _BuildFromPandas(dtr, newwf)
     elif freq_str == 'BA':
-        dtr = obj - pa.tseries.offsets.BYearEnd() + pa.tseries.offsets.BDay()
+        dtr = pa.DatetimeIndex(obj - pa.tseries.offsets.BYearEnd() 
+                               + pa.tseries.offsets.BDay(), freq = "infer")
         return _BuildFromPandas(dtr, newwf)
     elif freq_str == 'Q':
-        dtr = obj - pa.tseries.offsets.QuarterEnd() + pa.DateOffset(days=1)
+        dtr = pa.DatetimeIndex(obj - pa.tseries.offsets.QuarterEnd() 
+                               + pa.DateOffset(days=1), freq = "infer")
         return _BuildFromPandas(dtr, newwf)
     elif freq_str == 'BQ':
-        dtr = obj - pa.tseries.offsets.BQuarterEnd() + pa.tseries.offsets.BDay()
+        dtr = pa.DatetimeIndex(obj - pa.tseries.offsets.BQuarterEnd() 
+                               + pa.tseries.offsets.BDay(), freq = "infer")
         return _BuildFromPandas(dtr, newwf)
     elif freq_str == 'M':
-        dtr = obj - pa.tseries.offsets.MonthEnd() + pa.DateOffset(days=1)
+        dtr = pa.DatetimeIndex(obj - pa.tseries.offsets.MonthEnd() 
+                               + pa.DateOffset(days=1), freq = "infer")
         return _BuildFromPandas(dtr, newwf)
     elif freq_str == 'BM':
-        dtr = obj - pa.tseries.offsets.BMonthEnd() + pa.tseries.offsets.BDay()
+        dtr = pa.DatetimeIndex(obj - pa.tseries.offsets.BMonthEnd() 
+                               + pa.tseries.offsets.BDay(), freq = "infer")
         return _BuildFromPandas(dtr, newwf)
     # first part of the EViews command
     result = "create " if newwf else "pagecreate "
@@ -88,12 +94,12 @@ def _BuildFromPandas(obj, newwf=True):
     time_end = str(obj[elem_cnt - 1].strftime('%H')) + ':' + \
                str(obj[elem_cnt - 1].strftime('%M')) + ':' + \
                str(obj[elem_cnt - 1].strftime('%S')) + ' '
-    time_min = str(obj.hour.min().item()) + ':' + \
-               str(obj.minute.min().item()) + ':' + \
-               str(obj.second.min().item()) 
-    time_max = str(obj.hour.max().item()) + ':' + \
-               str(obj.minute.max().item()) + ':' + \
-               str(obj.second.max().item())    
+    time_min = str(obj.hour.min()) + ':' + \
+               str(obj.minute.min()) + ':' + \
+               str(obj.second.min())
+    time_max = str(obj.hour.max()) + ':' + \
+               str(obj.minute.max()) + ':' + \
+               str(obj.second.max())    
     # yearly
     if (freq_str in ['AS', 'A', 'BAS', 'BA'] and \
         spacing in ['2', '3', '4', '5', '6', '7', '8', '9', '10', '20']):
@@ -292,7 +298,7 @@ def GetWFAsPython(app=None, wfname='', pagename='', namefilter='*'):
         #get index series
         dates = app.GetSeries("@date")
         idx = pa.DatetimeIndex(dates)
-    elif freq_str in ['H', 'Min', 'Sec']:
+    elif freq_str in ['H', 'Min', 'Sec']: 
         #get index series
         dates = app.GetSeries("@date")
         idx = pa.DatetimeIndex(dates)
@@ -305,7 +311,7 @@ replicated in pandas.")
 replicated in pandas.")
         if spacing and fnmatch.fnmatch(pgfreq, '*Sec(*)'):
             logging.warning("Custom seconds frequencies in EViews may not be exactly \
-replicated in pandas.")
+replicated in pandas.")           
     elif (pgfreq in ['D5', '5', 'D7', '7'] or
                     fnmatch.fnmatch(pgfreq, 'D(*)')):
         #get index series
