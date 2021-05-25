@@ -4,7 +4,7 @@ import gc
 import re
 import logging
 from pkg_resources import get_distribution
-from comtypes.client import CreateObject
+import win32com.client
 import numpy as np
 import pandas as pa
 
@@ -364,7 +364,7 @@ def GetEViewsApp(version='EViews.Manager', instance='either', showwindow=False):
     # this is an optional function for greater control of the app object
     # otherwise can just use the global app object
     try:
-        mgr = CreateObject(version)
+        mgr = win32com.client.Dispatch(version)
     except WindowsError:
         #if mgr is None:
         raise WindowsError(version + " not found.")
