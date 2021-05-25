@@ -17,7 +17,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 #        return f.read()
         
 setup(name='pyeviews',
-      version='1.0.2',
+      version='1.0.3',
       description='Data import/export and EViews function calls from Python',
       long_description=long_description,
       long_description_content_type='text/x-rst',
@@ -33,6 +33,6 @@ setup(name='pyeviews',
       author_email='pyeviews@yahoo.com',
       license='GPLv3',
       packages=['pyeviews'],
-      install_requires=['comtypes','numpy','pandas'],
+      install_requires=['pywin32','numpy','pandas'],
       include_package_data=True,
       zip_safe=False)
