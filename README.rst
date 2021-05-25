@@ -133,4 +133,4 @@ References
 Requirements
 ------------
 *   **EViews**, of course
-*   comtypes, numpy, and pandas
+*   pywin32, numpy, and pandas
