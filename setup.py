@@ -17,14 +17,13 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 #        return f.read()
         
 setup(name='pyeviews',
-      version='1.0.3',
+      version='1.0.4',
       description='Data import/export and EViews function calls from Python',
       long_description=long_description,
       long_description_content_type='text/x-rst',
       classifiers=['Development Status :: 5 - Production/Stable',
                    'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
                    'Topic :: Scientific/Engineering :: Information Analysis',
-                   'Programming Language :: Python :: 2',
                    'Programming Language :: Python :: 3',
                    'Operating System :: Microsoft :: Windows'],
       keywords='eviews econometrics',
@@ -33,6 +32,6 @@ setup(name='pyeviews',
       author_email='pyeviews@yahoo.com',
       license='GPLv3',
       packages=['pyeviews'],
-      install_requires=['pywin32','numpy','pandas'],
+      install_requires=['comtypes','numpy','pandas'],
       include_package_data=True,
       zip_safe=False)
