@@ -4,8 +4,8 @@ import gc
 import re
 import logging
 from pkg_resources import get_distribution
-#from comtypes.client import CreateObject
-import win32com.client
+from comtypes.client import CreateObject
+from comtypes import automation
 import numpy as np
 import pandas as pa
 
@@ -25,7 +25,9 @@ def _BuildFromPandas(obj, newwf=True):
     """Construct EViews command for dated wf"""
     elem_cnt = len(obj)
     # parse the frequency string
-    freq_str_all = obj.freqstr
+    freq_str_all = obj.freqstr  # dated
+    if freq_str_all == None:
+        freq_str_all = pa.infer_freq(obj)
     # check frequency string for custom spacing
     spacing = None
     search_obj = re.search(r'(\d*)(.*)', freq_str_all)
@@ -183,60 +185,106 @@ def PutPythonAsWF(obj, app=None, newwf=True):
     """Push Python data to EViews."""
     app = _GetApp(app)
     # which python data structure is obj?
-    if isinstance(obj, pa.core.frame.DataFrame):
+    if (isinstance(obj, pa.core.frame.DataFrame) and not isinstance(obj.index, pa.MultiIndex)):
         #create a new EViews workfile with the right frequency
-        create = _BuildFromPandas(obj.index, newwf)
+        if obj.index.inferred_type == "datetime64": # dated
+            create = _BuildFromPandas(obj.index, newwf)  
+        else:                                       # undated
+            create = _BuildFromPython(len(obj.index), newwf)
         app.Run(create)
         _CheckReservedNames(obj.columns)
         # loop through all columns, push each into EViews as a list
         for col in obj.columns:
-            col_data = obj[col].tolist()
+            col_data = automation.tagVARIANT(obj[col].tolist())
             app.PutSeries(col, col_data)
-    elif isinstance(obj, pa.core.series.Series):
+            # check if df has attributes, and if so, copy into each series
+            if obj.attrs:   
+                for key, value in obj.attrs.items():    
+                    app.Run(str(col) + '.setattr(' + str(key) + ') ' + str(value))
+    elif (isinstance(obj, pa.core.series.Series) and not isinstance(obj.index, pa.MultiIndex)):
         #create a new EViews workfile with the right frequency
-        create = _BuildFromPandas(obj.index, newwf)
+        if obj.index.inferred_type == "datetime64": # dated
+            create = _BuildFromPandas(obj.index, newwf)
+        else:                                       # undated    
+            create = _BuildFromPython(len(obj.index), newwf)
         app.Run(create)
         # push the data into EViews as a list
         name = "series"
         if obj.name:
             name = obj.name
             _CheckReservedNames([name])
-        data = obj.tolist()
+        data = automation.tagVARIANT(obj.tolist())
         app.PutSeries(name, data)
+        if obj.attrs:
+            for key, value in obj.attrs.items():
+                app.Run(str(name) + '.setattr(' + str(key) + ') ' + str(value))
     elif isinstance(obj, pa.core.indexes.datetimes.DatetimeIndex):
         #create a new EViews workfile with the right frequency
         create = _BuildFromPandas(obj, newwf)
         app.Run(create)
-    elif isinstance(obj, pa.core.panel.Panel):
-        #create a new EViews workfile with the right frequency
-        create = _BuildFromPandas(obj.major_axis, newwf)
-        create = create + str(len(obj.items))
+    elif isinstance(obj, pa.DataFrame) and isinstance(obj.index, pa.MultiIndex):
+        collevels = obj.columns.nlevels
+        idxlevels = obj.index.nlevels
+        # only one level of cols and two levels of rows allowed
+        if idxlevels != 2:
+            raise ValueError("Only two index (row) levels are allowed. You have " + idxlevels + ".")
+        if collevels > 1:
+            #raise Warning("Multiple columns levels found. Collapsing ...")
+            #newcollabels = obj.columns.map(lambda x: '_'.join([str(i) for i in x]))
+            raise ValueError("Only one column level is allowed. You have " + collevels + ".")
+        # create a new EViews workfile with the right frequency
+        if obj.index.get_level_values(1).inferred_type == "datetime64":                # dated
+            create = _BuildFromPandas(obj.index.get_level_values(1), newwf)            # total rows
+        else:                                                                          # undated    
+            create = _BuildFromPython(len(obj.index.get_level_values(1)), newwf)       # total rows
         app.Run(create)
         # concatenate items into single dataframe
-        # loop through and push each column into EViews as a list
-        result = pa.concat([obj[item] for item in obj.items])
+        result = pa.concat([obj.loc[item] for item in obj.index.get_level_values(0).unique()])
+        result.columns = result.columns.str.replace(" ", "_")
         _CheckReservedNames(result.columns)
+        # loop through and push each column into EViews as a list
         for col in result.columns:
-            #col_name = obj.columns[col_index]
-            #col_data = list(obj.values[col_index])
-            col_data = result[col].tolist()
+            col_data = automation.tagVARIANT(result[col].tolist())
             app.PutSeries(col, col_data)  
+        # handle index names
+        if obj.index.names:
+            groupname = obj.index.names[0]
+            cellname = obj.index.names[1]
+        else:
+            groupname = "groupid"
+            cellname = "cellid"
+        # structure the workfile
+        app.PutSeries(groupname, automation.tagVARIANT(obj.index.get_level_values(0).tolist()))
+        app.PutSeries(cellname, automation.tagVARIANT(obj.index.get_level_values(1).tolist()))
+        app.Run('pagestruct(bal=m) ' + groupname + ' ' + cellname)
+    elif isinstance(obj, pa.core.indexes.range.RangeIndex):
+        length = len(obj)
+        create = _BuildFromPython(length, newwf)
+        app.Run(create) # non-standard start/stop/step information currently being lost
     elif isinstance(obj, list):
         # create a new undated workfile with the right length
         length = len(obj)
         create = _BuildFromPython(length, newwf)
         app.Run(create)
         # push the data into EViews as a list
-        app.PutSeries("series", obj)
+        data = automation.tagVARIANT(obj)
+        app.PutSeries("series", data)
     elif isinstance(obj, dict):
         # create a new undated workfile with the right length
-        length = max(len(item) for item in obj.values())
-        create = _BuildFromPython(length, newwf)
+        maxlength = 0
+        for item in obj.values():
+            if type(item) == int or type(item) == float:
+                length = 1
+            else:
+                length = len(item)
+            if length > maxlength:
+                maxlength = length
+        create = _BuildFromPython(maxlength, newwf)
         app.Run(create)
         _CheckReservedNames(obj.keys())
         # loop through the dict and push the data into EViews as a list
         for key in obj:
-            data = obj[key]
+            data = automation.tagVARIANT(obj[key])
             app.PutSeries(str(key), data)
     elif isinstance(obj, np.ndarray):
         # create a new undated workfile with the right length
@@ -247,12 +295,12 @@ def PutPythonAsWF(obj, app=None, newwf=True):
         # is it a structured array?
         if obj.dtype.names:
             for name in obj.dtype.names:
-                data = obj[name].tolist()
+                data = automation.tagVARIANT(obj[name].tolist())
                 app.PutSeries(name, data)
         else:
             for col_num in range(obj.shape[1]):
                 name = "series" + str(col_num)
-                data = obj[:, col_num].tolist()
+                data = automation.tagVARIANT(obj[:, col_num].tolist())
                 app.PutSeries(name, data)        
     else:
         raise ValueError('Unsupported type: ' + str(type(obj)))
@@ -284,9 +332,10 @@ def GetWFAsPython(app=None, wfname='', pagename='', namefilter='*'):
     snames = app.Lookup(namefilter, "series", 1)
     anames = app.Lookup(namefilter, "alpha", 1)
     names = snames + anames
-    if not snames:
-        raise ValueError('No series objects found.')
-    # build DatetimeIndex object
+    wflength = app.Get("=@obsrange")
+    #if not snames:
+    #    raise ValueError('No series objects found.')
+    # build *Index object
     search_obj = re.search(r'(\d*)(\w*)', pgfreq)
     if search_obj:
         spacing = search_obj.group(1)
@@ -326,21 +375,26 @@ replicated in pandas.")
     elif pgfreq == '20Y':
         raise ValueError('Frequency ' + pgfreq + ' is not supported in pandas.')
     elif pgfreq == 'U':
-        pass
+        idx = pa.RangeIndex(start = 0, stop = wflength)
     else:
         raise ValueError('Unsupported workfile frequency: ' + pgfreq)
     # convert series names to a space delimited string
     names_str = ' '.join(names)
     # retrieve all series+alpha data as a single call
-    grp = app.GetGroup(names_str, "@all")
-    if pgfreq == 'U':
-        # for undated workfiles we don't pass in an index
-        dfr = pa.DataFrame(columns=list(names))
+    if len(names) != 0: 
+        grp = app.GetGroup(automation.tagVARIANT(names_str), "@all")
+    else:   # wf is empty
+        grp = None
+    if pgfreq == 'U' and len(names) != 0:
+        dfr = pa.DataFrame(index = idx, columns=list(names))
         # for each series name, extract the data from our grp array
         for sindex in range(len(names)):
             dfr[names[sindex]] = [col[sindex] for col in grp]
         data = dfr
-    else:
+    elif pgfreq == 'U' and len(names) == 0:
+        dfr = pa.DataFrame(index = idx)
+        data = dfr
+    elif pgfreq != 'U' and len(names) != 0:
         # for dated workfiles create the dataframe
         # build dataframe with empty columns 
         dfr = pa.DataFrame(index=idx, columns=list(snames))
@@ -348,13 +402,27 @@ replicated in pandas.")
         for sindex in range(len(snames)):
             dfr[snames[sindex]] = [col[sindex] for col in grp]
         data = dfr
+    elif pgfreq != 'U' and len(names) == 0:
+        dfr = pa.DataFrame(index = idx)
+        data = dfr
     if ispanel:
-        crossids = dfr['CROSSID'].unique()
-        datadict = {elem: pa.DataFrame for elem in crossids}
-        for key in datadict.keys():
-            datadict[key] = dfr[:][dfr['CROSSID'] == key]
-            datadict[key].drop(['CROSSID', 'DATEID'], axis=1, inplace=True)
-        data = pa.Panel(datadict)   
+        panelids = app.Get("=@pageids").split()
+        if len(panelids) != 2:
+            raise ValueError("EViews panel must have two id values, not " + len(panelids) + ".")
+        data = pa.DataFrame(data = dfr.drop(panelids, axis = 'columns').to_numpy(),\
+                            index = pa.MultiIndex.from_product([dfr[panelids[0]].unique(), dfr[panelids[1]].unique()],\
+                            names = panelids), columns = dfr.columns.drop(panelids))
+    # get all attribute names
+    for var in names:
+        attrnames = app.Get('=@attrnames("*", "' + str(var) + '")').split()
+        if attrnames and not ispanel:
+            attrvals = []
+            for attr in attrnames:
+                tempvar = app.Get('=@getnextname("TEMP")') 
+                app.Run('string ' + str(tempvar) + ' = ' + str(var).strip() + '.@attr("' + str(attr) + '")')
+                attrvals.append(app.Get(str(tempvar)))
+                app.Run('delete ' + str(tempvar))
+            data.attrs.update(dict(zip(attrnames, attrvals)))
     # close the workfile
     #app.Run("wfclose")   
     return data
@@ -365,8 +433,7 @@ def GetEViewsApp(version='EViews.Manager', instance='either', showwindow=False):
     # this is an optional function for greater control of the app object
     # otherwise can just use the global app object
     try:
-        #mgr = CreateObject(version) # comtypes
-        mgr = win32com.client.Dispatch(version)
+        mgr = CreateObject(version)
     except WindowsError:
         #if mgr is None:
         raise WindowsError(version + " not found.")
