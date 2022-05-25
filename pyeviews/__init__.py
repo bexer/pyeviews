@@ -315,7 +315,7 @@ def GetWFAsPython(app=None, wfname='', pagename='', namefilter='*'):
               'H':'H', 'Min':'T', 'Sec':'S'} # also 'D7':'D', 'Min':'min'
     # load the workfile 
     if wfname != '':
-        app.Run("wfuse " + wfname) # needs full pathname
+        app.Run("wfuse " + '"' + wfname + '"') # needs full pathname
     if pagename:
         #change workfile page to specified page name
         if app.Get('=@pageexist("' + str(pagename) + '")') == 1:
