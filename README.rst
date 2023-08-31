@@ -1,5 +1,5 @@
 pyeviews: EViews & Python
-=========================
+==========================
 
 The purpose of the **pyeviews** package is to make it easier for `EViews <http://www.eviews.com>`_ and Python to talk to each other, so Python programmers can use the econometric engine of EViews directly from Python.  This package uses COM to transfer data between Python and EViews.  (For more information on COM and EViews, take a look at our `whitepaper on the subject <http://www.eviews.com/download/whitepapers/EViews_COM_Automation.pdf>`_.)
 
